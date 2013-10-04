@@ -57,6 +57,81 @@ static void led_irq_handler(void *opaque, int n, int level)
     }
 }
 
+static void in1_irq_handler(void *opaque, int n, int level)
+{
+    assert(n == 0);
+
+    switch (level) {
+        case 0:
+            car_emulator(0,0,0,0);
+            break;
+        case 1:
+            car_emulator(1,0,0,0);
+            break;
+    }
+}
+
+static void in2_irq_handler(void *opaque, int n, int level)
+{
+    assert(n == 0);
+    switch (level) {
+        case 0:
+            car_emulator(0,0,0,0);
+            break;
+        case 1:
+            car_emulator(0,1,0,0);
+            break;
+    }
+}
+
+static void in3_irq_handler(void *opaque, int n, int level)
+{
+    assert(n == 0);
+    switch (level) {
+        case 0:
+            car_emulator(0,0,0,0);
+            break;
+        case 1:
+            car_emulator(0,0,1,0);
+            break;
+    }
+}
+
+static void in4_irq_handler(void *opaque, int n, int level)
+{
+    assert(n == 0);
+    switch (level) {
+        case 0:
+            car_emulator(0,0,0,0);
+            break;
+        case 1:
+            car_emulator(0,0,0,1);
+            break;
+    }
+}
+
+
+int in1_count = 0;
+int in2_count = 0;
+int in3_count = 0;
+int in4_count = 0;
+
+void car_emulator(int in1,int in2,int in3,int in4){
+
+    in1_count += in1;
+    in2_count += in2;
+    in3_count += in3;
+    in4_count += in4;
+    
+    printf("in1 count: %d  ",in1);
+    printf("in2 count: %d  ",in2);
+    printf("in3 count: %d  ",in3);
+    printf("in4 count: %d  \r",in4);
+
+}
+
+
+
 static void stm32_p103_key_event(void *opaque, int keycode)
 {
     Stm32P103 *s = (Stm32P103 *)opaque;
@@ -96,6 +171,10 @@ static void stm32_p103_init(QEMUMachineInitArgs *args)
 {
     const char* kernel_filename = args->kernel_filename;
     qemu_irq *led_irq;
+    qemu_irq *in1_irq;
+    qemu_irq *in2_irq;
+    qemu_irq *in3_irq;
+    qemu_irq *in4_irq;
     Stm32P103 *s;
 
     s = (Stm32P103 *)g_malloc0(sizeof(Stm32P103));
@@ -108,15 +187,35 @@ static void stm32_p103_init(QEMUMachineInitArgs *args)
 
     DeviceState *gpio_a = DEVICE(object_resolve_path("/machine/stm32/gpio[a]", NULL));
     DeviceState *gpio_c = DEVICE(object_resolve_path("/machine/stm32/gpio[c]", NULL));
+    DeviceState *gpio_d = DEVICE(object_resolve_path("/machine/stm32/gpio[d]", NULL));
     DeviceState *uart2 = DEVICE(object_resolve_path("/machine/stm32/uart[2]", NULL));
 
     assert(gpio_a);
     assert(gpio_c);
+    assert(gpio_d);
     assert(uart2);
 
     /* Connect LED to GPIO C pin 12 */
     led_irq = qemu_allocate_irqs(led_irq_handler, NULL, 1);
     qdev_connect_gpio_out(gpio_c, 12, led_irq[0]);
+
+    /*Connect PD1 to in6  */
+    in1_irq = qemu_allocate_irqs(in1_irq_handler, NULL, 1);
+    qdev_connect_gpio_out(gpio_d, 6, in1_irq[0]);
+
+    /*Connect PD1 to in8  */
+    in2_irq = qemu_allocate_irqs(in2_irq_handler, NULL, 1);
+    qdev_connect_gpio_out(gpio_d, 8, in2_irq[0]);
+
+    /*Connect PD1 to in10  */
+    in3_irq = qemu_allocate_irqs(in3_irq_handler, NULL, 1);
+    qdev_connect_gpio_out(gpio_d, 10, in3_irq[0]);
+
+    /*Connect PD1 to in11  */
+    in4_irq = qemu_allocate_irqs(in4_irq_handler, NULL, 1);
+    qdev_connect_gpio_out(gpio_d, 11, in4_irq[0]);
+
+
 
     /* Connect button to GPIO A pin 0 */
     s->button_irq = qdev_get_gpio_in(gpio_a, 0);
