@@ -19,7 +19,8 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, see <http://www.gnu.org/licenses/>.
  */
-
+#include <math.h>
+#include <time.h>
 #include "hw/arm/stm32.h"
 #include "hw/sysbus.h"
 #include "hw/arm/arm.h"
@@ -27,6 +28,23 @@
 #include "ui/console.h"
 #include "sysemu/sysemu.h"
 #include "hw/boards.h"
+
+#define PI 3.14159265
+
+
+/*Global variables*/
+int car_direction;
+float car_angle;
+int irq_count = 0; //we check the PWM duty cycle every 100 irqs
+int right_motor_state = 0;  //0=stop 1=forward 2=backward
+
+int right_motor_state_record[101];
+int right_motor_time_record[100];
+
+int in1,in2,in3,in4=0;
+clock_t right_forward_start,right_forward_end,right_stop_start,right_stop_end,right_backward_start,right_backward_end;
+clock_t time_now,time_last;
+int in1_count,in2_count,in3_count,in4_count=0;
 
 
 typedef struct {
@@ -57,79 +75,177 @@ static void led_irq_handler(void *opaque, int n, int level)
     }
 }
 
+
+void show_pwm(){
+
+    int count=0;
+    char ch1,ch2,ch3;
+    ch1 = '-';
+    ch2 = '^';
+    ch3 = 'v';
+
+    while(count<10){
+        if ( right_motor_state_record[count] == 0 )
+        {
+            printf("%c",ch1);
+        }
+        else if ( right_motor_state_record[count] == 1 )
+        {
+            printf("%c",ch2);
+        }
+        else{
+            printf("%c",ch3);
+        }
+        count++;
+    }
+    printf("\n");
+
+}
+
+
+int check_irq_count(){
+    if ( irq_count == 99 ){
+        show_pwm();
+        irq_count = 0;
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+
+
+void clock_count(int state){
+    if ( time_last != 0 )
+        {
+            time_now=clock();
+            right_motor_time_record[irq_count-1]= time_now - time_last;
+
+            time_last=clock();
+            right_motor_state_record[irq_count] = state;
+        }
+        else{
+            time_last = clock();
+            right_motor_state_record[irq_count] = state;
+        }
+}
+
+void in1_irq_low(){
+    if ( in1 == in2 ) //stop
+    {
+        clock_count(0);
+    }
+    else{  //backward
+        clock_count(2);
+    }
+}
+
+void in1_irq_high(){
+    if ( in1 == in2 ) //stop
+    {
+        clock_count(0);
+    }
+    else{  //backward
+        clock_count(1);
+    }
+}
+
+void in2_irq_low(){
+    if ( in1 == in2 ) //stop
+    {
+        clock_count(0);
+    }
+    else{  //forward
+        clock_count(1);
+    }
+}
+
+void in2_irq_high(){
+    if ( in1 == in2 ) //stop
+    {
+        clock_count(0);
+    }
+    else{  //backward
+        clock_count(2);
+    }
+}
+
+
+
 static void in1_irq_handler(void *opaque, int n, int level)
 {
-    assert(n == 0);
-
-    switch (level) {
-        case 0:
-            car_emulator(0,0,0,0);
-            break;
-        case 1:
-            car_emulator(1,0,0,0);
-            break;
+    if(check_irq_count()==1){
     }
+    
+    else{
+
+        assert(n == 0);
+
+        switch (level) {
+            case 0:
+                in1=0;
+                in1_irq_low();
+                break;
+            case 1:
+                in1=1;
+                in1_irq_high();
+                break;
+        }
+    }
+    irq_count++;
 }
 
 static void in2_irq_handler(void *opaque, int n, int level)
 {
-    assert(n == 0);
-    switch (level) {
-        case 0:
-            car_emulator(0,0,0,0);
-            break;
-        case 1:
-            car_emulator(0,1,0,0);
-            break;
+    if(check_irq_count()==1){
     }
+
+    else{
+        assert(n == 0);
+        switch (level) {
+            case 0:
+                in2=0;
+                in2_irq_low();
+                break;
+            case 1:
+                in2=1;
+                in2_irq_high();
+                break;
+        }
+    }
+    irq_count++;
 }
 
 static void in3_irq_handler(void *opaque, int n, int level)
 {
+    check_irq_count();
+
     assert(n == 0);
     switch (level) {
         case 0:
-            car_emulator(0,0,0,0);
+            
             break;
         case 1:
-            car_emulator(0,0,1,0);
+            
             break;
     }
 }
 
 static void in4_irq_handler(void *opaque, int n, int level)
 {
+    check_irq_count();
+
     assert(n == 0);
     switch (level) {
         case 0:
-            car_emulator(0,0,0,0);
+            
             break;
         case 1:
-            car_emulator(0,0,0,1);
+            
             break;
     }
 }
-
-
-int in1_count = 0;
-int in2_count = 0;
-int in3_count = 0;
-int in4_count = 0;
-
-void car_emulator(int in1,int in2,int in3,int in4){
-
-    in1_count += in1;
-    in2_count += in2;
-    in3_count += in3;
-    in4_count += in4;
-    
-    printf("in1 count: %d  ",in1);
-    printf("in2 count: %d  ",in2);
-    printf("in3 count: %d  ",in3);
-    printf("in4 count: %d  \r",in4);
-
-}
-
 
 
 static void stm32_p103_key_event(void *opaque, int keycode)
