@@ -37,15 +37,12 @@ int car_direction;
 float car_angle;
 int irq_count = 0; //we check the PWM duty cycle every 100 irqs
 int right_motor_state = 0;  //0=stop 1=forward 2=backward
-
-int right_motor_state_record[101];
+int right_motor_state_record[100];
 int right_motor_time_record[100];
-
 int in1,in2,in3,in4=0;
-clock_t right_forward_start,right_forward_end,right_stop_start,right_stop_end,right_backward_start,right_backward_end;
 clock_t time_now,time_last;
-int in1_count,in2_count,in3_count,in4_count=0;
-
+int time_diff;
+int time_sum=0;
 
 typedef struct {
     Stm32 *stm32;
@@ -77,29 +74,42 @@ static void led_irq_handler(void *opaque, int n, int level)
 
 
 void show_pwm(){
-
     int count=0;
+    int show_count=0;
     char ch1,ch2,ch3;
     ch1 = '-';
     ch2 = '^';
     ch3 = 'v';
+    int min_tmp = 500;
 
-    while(count<10){
-        if ( right_motor_state_record[count] == 0 )
-        {
-            printf("%c",ch1);
-        }
-        else if ( right_motor_state_record[count] == 1 )
-        {
-            printf("%c",ch2);
+    count=1;
+    while( count < 99 ){
+        if ( right_motor_time_record[count]!=0 && (right_motor_time_record[count] < min_tmp) ){
+            min_tmp = right_motor_time_record[count];
         }
         else{
-            printf("%c",ch3);
         }
         count++;
     }
-    printf("\n");
+    count=0;
+    while( count < 99 ){
+        right_motor_time_record[count] = (int) (right_motor_time_record[count] / min_tmp);
 
+        for ( show_count = 0; show_count < right_motor_time_record[count] ; show_count++){
+            if ( right_motor_state_record[count+1] == 0 ){
+                printf("%c",ch1);
+            }
+            else if ( right_motor_state_record[count+1] == 1 ){
+                printf("%c",ch2);
+            }
+            else{
+                printf("%c",ch3);
+            }
+        }        
+        count++;
+    }
+    //I don't know why, but if we don't add \n the system will crash
+    printf("\n");
 }
 
 
@@ -107,6 +117,7 @@ int check_irq_count(){
     if ( irq_count == 99 ){
         show_pwm();
         irq_count = 0;
+        time_sum=0;
         return 1;
     }
     else{
@@ -114,21 +125,20 @@ int check_irq_count(){
     }
 }
 
-
-
 void clock_count(int state){
-    if ( time_last != 0 )
-        {
-            time_now=clock();
-            right_motor_time_record[irq_count-1]= time_now - time_last;
+    if ( time_last != 0 ){
+        time_now=clock();
+        time_diff = (time_now - time_last) / (CLOCKS_PER_SEC / 10000);
+        right_motor_time_record[irq_count-1] = time_diff;
+        time_sum += time_diff;
 
-            time_last=clock();
-            right_motor_state_record[irq_count] = state;
-        }
-        else{
-            time_last = clock();
-            right_motor_state_record[irq_count] = state;
-        }
+        time_last=clock();
+        right_motor_state_record[irq_count] = state;
+    }
+    else{
+        time_last = clock();
+        right_motor_state_record[irq_count] = state;
+    }
 }
 
 void in1_irq_low(){
