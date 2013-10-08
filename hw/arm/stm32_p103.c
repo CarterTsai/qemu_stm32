@@ -140,28 +140,6 @@ void clock_count(int state){
         right_motor_state_record[irq_count] = state;
     }
 }
-/*
-void in1_irq_low(){
-    if ( in1 == in2 ) clock_count(0);
-    else clock_count(2);
-}
-
-void in1_irq_high(){
-    if ( in1 == in2 ) clock_count(0);
-    else clock_count(1);
-}
-
-void in2_irq_low(){
-    if ( in1 == in2 ) clock_count(0);
-    else clock_count(1);
-}
-
-void in2_irq_high(){
-    if ( in1 == in2 ) clock_count(0);
-    else clock_count(2);
-}
-
-*/
 
 static void in1_irq_handler(void *opaque, int n, int level)
 {
