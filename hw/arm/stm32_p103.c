@@ -140,48 +140,28 @@ void clock_count(int state){
         right_motor_state_record[irq_count] = state;
     }
 }
-
+/*
 void in1_irq_low(){
-    if ( in1 == in2 ) //stop
-    {
-        clock_count(0);
-    }
-    else{  //backward
-        clock_count(2);
-    }
+    if ( in1 == in2 ) clock_count(0);
+    else clock_count(2);
 }
 
 void in1_irq_high(){
-    if ( in1 == in2 ) //stop
-    {
-        clock_count(0);
-    }
-    else{  //backward
-        clock_count(1);
-    }
+    if ( in1 == in2 ) clock_count(0);
+    else clock_count(1);
 }
 
 void in2_irq_low(){
-    if ( in1 == in2 ) //stop
-    {
-        clock_count(0);
-    }
-    else{  //forward
-        clock_count(1);
-    }
+    if ( in1 == in2 ) clock_count(0);
+    else clock_count(1);
 }
 
 void in2_irq_high(){
-    if ( in1 == in2 ) //stop
-    {
-        clock_count(0);
-    }
-    else{  //backward
-        clock_count(2);
-    }
+    if ( in1 == in2 ) clock_count(0);
+    else clock_count(2);
 }
 
-
+*/
 
 static void in1_irq_handler(void *opaque, int n, int level)
 {
@@ -195,11 +175,13 @@ static void in1_irq_handler(void *opaque, int n, int level)
         switch (level) {
             case 0:
                 in1=0;
-                in1_irq_low();
+                if ( in1 == in2 ) clock_count(0);
+                else clock_count(2);
                 break;
             case 1:
                 in1=1;
-                in1_irq_high();
+                if ( in1 == in2 ) clock_count(0);
+                else clock_count(1);
                 break;
         }
     }
@@ -216,11 +198,13 @@ static void in2_irq_handler(void *opaque, int n, int level)
         switch (level) {
             case 0:
                 in2=0;
-                in2_irq_low();
+                if ( in1 == in2 ) clock_count(0);
+                else clock_count(1);
                 break;
             case 1:
                 in2=1;
-                in2_irq_high();
+                if ( in1 == in2 ) clock_count(0);
+                else clock_count(2);
                 break;
         }
     }
