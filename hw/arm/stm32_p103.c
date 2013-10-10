@@ -43,6 +43,12 @@ int in1,in2,in3,in4=0;
 clock_t time_now,time_last;
 int time_diff;
 int time_sum=0;
+float right_ratio;
+
+
+int right_high_count=0;
+int right_low_count=0;
+int right_inverse_count=0;
 
 typedef struct {
     Stm32 *stm32;
@@ -73,7 +79,7 @@ static void led_irq_handler(void *opaque, int n, int level)
 }
 
 
-void show_pwm(){
+void show_pwm(int *motor_time_record,int *motor_state_record){
     int count=0;
     int show_count=0;
     char ch1,ch2,ch3;
@@ -82,24 +88,24 @@ void show_pwm(){
     ch3 = 'v';
     int min_tmp = 500;
 
-    count=1;
     while( count < 99 ){
-        if ( right_motor_time_record[count]!=0 && (right_motor_time_record[count] < min_tmp) ){
-            min_tmp = right_motor_time_record[count];
+        if ( motor_time_record[count]!=0 && (motor_time_record[count] < min_tmp) ){
+            min_tmp = motor_time_record[count];
         }
         else{
         }
         count++;
     }
+
     count=0;
     while( count < 99 ){
-        right_motor_time_record[count] = (int) (right_motor_time_record[count] / min_tmp);
+        motor_time_record[count] = (int) (motor_time_record[count] / min_tmp);
 
-        for ( show_count = 0; show_count < right_motor_time_record[count] ; show_count++){
-            if ( right_motor_state_record[count+1] == 0 ){
+        for ( show_count = 0; show_count < motor_time_record[count] ; show_count++){
+            if ( motor_state_record[count+1] == 0 ){
                 printf("%c",ch1);
             }
-            else if ( right_motor_state_record[count+1] == 1 ){
+            else if ( motor_state_record[count+1] == 1 ){
                 printf("%c",ch2);
             }
             else{
@@ -112,12 +118,41 @@ void show_pwm(){
     printf("\n");
 }
 
+float ratio_count(int *motor_time_record, int *motor_state_record,int low_count,int high_count,int inverse_count){
+    
+    int count = 0;
+
+    while(count<99){
+        if ( motor_state_record[count+1] == 0 ){
+            low_count += motor_time_record[count];
+        }
+        else if( motor_state_record[count+1] == 1 ){
+            high_count += motor_time_record[count];
+        }
+        else{
+            inverse_count += motor_time_record[count];
+        }
+        count++;
+    }
+
+    float ratio = (float)(high_count - inverse_count) / low_count;
+    printf("high : %d  low : %d   inverse : %d ", high_count,low_count,inverse_count);
+    printf("ratio : %f",ratio);
+    printf("\n");
+    return ratio;
+}
+
 
 int check_irq_count(){
     if ( irq_count == 99 ){
-        show_pwm();
+        show_pwm(right_motor_time_record,right_motor_state_record);
+        right_ratio = ratio_count(right_motor_time_record,right_motor_state_record,right_low_count,right_high_count,right_inverse_count);
+        
         irq_count = 0;
         time_sum=0;
+        right_high_count=0;
+        right_low_count=0;
+        right_inverse_count=0;
         return 1;
     }
     else{
@@ -140,6 +175,7 @@ void clock_count(int state){
         right_motor_state_record[irq_count] = state;
     }
 }
+
 
 static void in1_irq_handler(void *opaque, int n, int level)
 {
