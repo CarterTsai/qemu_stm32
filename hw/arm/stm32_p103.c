@@ -167,6 +167,8 @@ int check_irq_count(){
     if ( (RightMotorInfo.irq_count+LeftMotorInfo.irq_count) == 199 ){
         show_pwm(RightMotorInfo);
         RightMotorInfo.ratio = ratio_count(RightMotorInfo);
+        show_pwm(LeftMotorInfo);
+        LeftMotorInfo.ratio = ratio_count(LeftMotorInfo);
         renew_motor();
         return 1;
     }
