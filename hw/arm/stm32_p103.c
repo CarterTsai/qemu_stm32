@@ -147,23 +147,27 @@ float ratio_count(motor_info MotorInfo){
     return ratio;
 }
 
+void renew_motor(){
+    RightMotorInfo.irq_count = 0;
+    RightMotorInfo.time_sum=0;
+    RightMotorInfo.high_count=0;
+    RightMotorInfo.low_count=0;
+    RightMotorInfo.inverse_count=0;
+    
+    LeftMotorInfo.irq_count= 0;
+    LeftMotorInfo.time_sum=0;
+    LeftMotorInfo.high_count=0;
+    LeftMotorInfo.low_count=0;
+    LeftMotorInfo.inverse_count=0;
+}
+
+
 
 int check_irq_count(){
     if ( (RightMotorInfo.irq_count+LeftMotorInfo.irq_count) == 199 ){
         show_pwm(RightMotorInfo);
         RightMotorInfo.ratio = ratio_count(RightMotorInfo);
-        
-        RightMotorInfo.irq_count = 0;
-        RightMotorInfo.time_sum=0;
-        RightMotorInfo.high_count=0;
-        RightMotorInfo.low_count=0;
-        RightMotorInfo.inverse_count=0;
-        
-        LeftMotorInfo.irq_count= 0;
-        LeftMotorInfo.time_sum=0;
-        LeftMotorInfo.high_count=0;
-        LeftMotorInfo.low_count=0;
-        LeftMotorInfo.inverse_count=0;
+        renew_motor();
         return 1;
     }
     else{
