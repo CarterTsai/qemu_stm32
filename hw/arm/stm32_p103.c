@@ -47,8 +47,9 @@ typedef struct {
 
 typedef struct
 {
-    int state_record[100];
-    int time_record[100];
+    int irq_count;
+    int state_record[200];
+    int time_record[200];
     int low_count;
     int high_count;
     int inverse_count;
@@ -60,6 +61,7 @@ typedef struct
 } motor_info;
 
 motor_info RightMotorInfo;
+motor_info LeftMotorInfo;
 
 static void led_irq_handler(void *opaque, int n, int level)
 {
@@ -89,7 +91,7 @@ void show_pwm(motor_info MotorInfo){
     ch3 = 'v';
     int min_tmp = 500;
 
-    while( count < 99 ){
+    while( count < MotorInfo.irq_count ){
         if ( MotorInfo.time_record[count]!=0 && (MotorInfo.time_record[count] < min_tmp) ){
             min_tmp = MotorInfo.time_record[count];
         }
@@ -99,7 +101,7 @@ void show_pwm(motor_info MotorInfo){
     }
 
     count=0;
-    while( count < 99 ){
+    while( count < MotorInfo.irq_count ){
         MotorInfo.time_record[count] = (int) (MotorInfo.time_record[count] / min_tmp);
 
         for ( show_count = 0; show_count < MotorInfo.time_record[count] ; show_count++){
@@ -112,7 +114,7 @@ void show_pwm(motor_info MotorInfo){
             else{
                 printf("%c",ch3);
             }
-        }        
+        }
         count++;
     }
     //I don't know why, but if we don't add \n the system will crash
@@ -124,7 +126,7 @@ float ratio_count(motor_info MotorInfo){
     int count = 0;
     int total_time=0;
 
-    while(count<99){
+    while(count<MotorInfo.irq_count){
         if ( MotorInfo.state_record[count+1] == 0 ){
             MotorInfo.low_count += MotorInfo.time_record[count];
         }
@@ -147,15 +149,21 @@ float ratio_count(motor_info MotorInfo){
 
 
 int check_irq_count(){
-    if ( irq_count == 99 ){
+    if ( (RightMotorInfo.irq_count+LeftMotorInfo.irq_count) == 199 ){
         show_pwm(RightMotorInfo);
         RightMotorInfo.ratio = ratio_count(RightMotorInfo);
         
-        irq_count = 0;
+        RightMotorInfo.irq_count = 0;
         RightMotorInfo.time_sum=0;
         RightMotorInfo.high_count=0;
         RightMotorInfo.low_count=0;
         RightMotorInfo.inverse_count=0;
+        
+        LeftMotorInfo.irq_count= 0;
+        LeftMotorInfo.time_sum=0;
+        LeftMotorInfo.high_count=0;
+        LeftMotorInfo.low_count=0;
+        LeftMotorInfo.inverse_count=0;
         return 1;
     }
     else{
@@ -167,15 +175,15 @@ void clock_count(int state, motor_info* MotorInfo){
     if ( MotorInfo->time_last != 0 ){
         MotorInfo->time_now=clock();
         MotorInfo->time_diff = (MotorInfo->time_now - MotorInfo->time_last) / (CLOCKS_PER_SEC / 10000);
-        MotorInfo->time_record[irq_count-1] = MotorInfo->time_diff;
+        MotorInfo->time_record[MotorInfo->irq_count-1] = MotorInfo->time_diff;
         MotorInfo->time_sum += MotorInfo->time_diff;
 
         MotorInfo->time_last=clock();
-        MotorInfo->state_record[irq_count] = state;
+        MotorInfo->state_record[MotorInfo->irq_count] = state;
     }
     else{
         MotorInfo->time_last = clock();
-        MotorInfo->state_record[irq_count] = state;
+        MotorInfo->state_record[MotorInfo->irq_count] = state;
     }
 }
 
@@ -202,7 +210,7 @@ static void in1_irq_handler(void *opaque, int n, int level)
                 break;
         }
     }
-    irq_count++;
+    RightMotorInfo.irq_count++;
 }
 
 static void in2_irq_handler(void *opaque, int n, int level)
@@ -225,37 +233,52 @@ static void in2_irq_handler(void *opaque, int n, int level)
                 break;
         }
     }
-    irq_count++;
+    RightMotorInfo.irq_count++;
 }
 
 static void in3_irq_handler(void *opaque, int n, int level)
 {
-    check_irq_count();
-
-    assert(n == 0);
-    switch (level) {
-        case 0:
-            
-            break;
-        case 1:
-            
-            break;
+    if(check_irq_count()==1){
     }
+    else{
+        assert(n == 0);
+        switch (level) {
+            case 0:
+                in3=0;
+                if ( in3 == in4 ) clock_count( 0, &LeftMotorInfo);
+                else clock_count( 2 ,&LeftMotorInfo);
+                break;
+            case 1:
+                in3=1;
+                if ( in3 == in4 ) clock_count( 0 ,&LeftMotorInfo);
+                else clock_count( 1 ,&LeftMotorInfo);
+                break;
+        }
+    }
+    LeftMotorInfo.irq_count++;
 }
 
 static void in4_irq_handler(void *opaque, int n, int level)
 {
-    check_irq_count();
-
-    assert(n == 0);
-    switch (level) {
-        case 0:
-            
-            break;
-        case 1:
-            
-            break;
+    if(check_irq_count()==1){
     }
+
+    else{
+        assert(n == 0);
+        switch (level) {
+            case 0:
+                in4=0;
+                if ( in3 == in4 ) clock_count( 0 ,&LeftMotorInfo);
+                else clock_count( 1 ,&LeftMotorInfo);
+                break;
+            case 1:
+                in4=1;
+                if ( in3 == in4 ) clock_count( 0 ,&LeftMotorInfo);
+                else clock_count( 2 ,&LeftMotorInfo);
+                break;
+        }
+    }
+    LeftMotorInfo.irq_count++;
 }
 
 
@@ -304,6 +327,9 @@ static void stm32_p103_init(QEMUMachineInitArgs *args)
     qemu_irq *in4_irq;
     Stm32P103 *s;
     RightMotorInfo.time_sum = 0;
+    LeftMotorInfo.time_sum = 0;    
+    RightMotorInfo.irq_count = 0;
+    LeftMotorInfo.irq_count = 0;
 
     s = (Stm32P103 *)g_malloc0(sizeof(Stm32P103));
 
