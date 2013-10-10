@@ -48,8 +48,8 @@ typedef struct {
 typedef struct
 {
     int irq_count;
-    int state_record[200];
-    int time_record[200];
+    int state_record[500];
+    int time_record[500];
     int low_count;
     int high_count;
     int inverse_count;
@@ -105,10 +105,10 @@ void show_pwm(motor_info MotorInfo){
         MotorInfo.time_record[count] = (int) (MotorInfo.time_record[count] / min_tmp);
 
         for ( show_count = 0; show_count < MotorInfo.time_record[count] ; show_count++){
-            if ( MotorInfo.state_record[count+1] == 0 ){
+            if ( MotorInfo.state_record[count] == 0 ){
                 printf("%c",ch1);
             }
-            else if ( MotorInfo.state_record[count+1] == 1 ){
+            else if ( MotorInfo.state_record[count] == 1 ){
                 printf("%c",ch2);
             }
             else{
@@ -127,10 +127,10 @@ float ratio_count(motor_info MotorInfo){
     int total_time=0;
 
     while(count<MotorInfo.irq_count){
-        if ( MotorInfo.state_record[count+1] == 0 ){
+        if ( MotorInfo.state_record[count] == 0 ){
             MotorInfo.low_count += MotorInfo.time_record[count];
         }
-        else if( MotorInfo.state_record[count+1] == 1 ){
+        else if( MotorInfo.state_record[count] == 1 ){
             MotorInfo.high_count += MotorInfo.time_record[count];
         }
         else{
@@ -164,7 +164,7 @@ void renew_motor(){
 
 
 int check_irq_count(){
-    if ( (RightMotorInfo.irq_count+LeftMotorInfo.irq_count) == 199 ){
+    if ( (RightMotorInfo.irq_count+LeftMotorInfo.irq_count) == 499 ){
         show_pwm(RightMotorInfo);
         RightMotorInfo.ratio = ratio_count(RightMotorInfo);
         show_pwm(LeftMotorInfo);
@@ -206,13 +206,13 @@ static void in1_irq_handler(void *opaque, int n, int level)
         switch (level) {
             case 0:
                 in1=0;
-                if ( in1 == in2 ) clock_count( 0, &RightMotorInfo);
-                else clock_count( 2 ,&RightMotorInfo);
+                if ( in2 == 0 ) clock_count( 0, &RightMotorInfo);
+                else clock_count( 2, &RightMotorInfo);
                 break;
             case 1:
                 in1=1;
-                if ( in1 == in2 ) clock_count( 0 ,&RightMotorInfo);
-                else clock_count( 1 ,&RightMotorInfo);
+                if ( in2 == 1 ) clock_count( 0 ,&RightMotorInfo);
+                else clock_count( 1, &RightMotorInfo);
                 break;
         }
     }
@@ -229,13 +229,13 @@ static void in2_irq_handler(void *opaque, int n, int level)
         switch (level) {
             case 0:
                 in2=0;
-                if ( in1 == in2 ) clock_count( 0 ,&RightMotorInfo);
-                else clock_count( 1 ,&RightMotorInfo);
+                if ( in1 == 0 ) clock_count( 0, &RightMotorInfo);
+                else clock_count( 1, &RightMotorInfo);
                 break;
             case 1:
                 in2=1;
-                if ( in1 == in2 ) clock_count( 0 ,&RightMotorInfo);
-                else clock_count( 2 ,&RightMotorInfo);
+                if ( in1 == 1 ) clock_count( 0, &RightMotorInfo);
+                else clock_count( 2, &RightMotorInfo);
                 break;
         }
     }
@@ -252,12 +252,12 @@ static void in3_irq_handler(void *opaque, int n, int level)
             case 0:
                 in3=0;
                 if ( in3 == in4 ) clock_count( 0, &LeftMotorInfo);
-                else clock_count( 2 ,&LeftMotorInfo);
+                else clock_count( 2, &LeftMotorInfo);
                 break;
             case 1:
                 in3=1;
-                if ( in3 == in4 ) clock_count( 0 ,&LeftMotorInfo);
-                else clock_count( 1 ,&LeftMotorInfo);
+                if ( in3 == in4 ) clock_count( 0, &LeftMotorInfo);
+                else clock_count( 1, &LeftMotorInfo);
                 break;
         }
     }
