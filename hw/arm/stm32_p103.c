@@ -122,6 +122,7 @@ void show_pwm(motor_info MotorInfo){
 float ratio_count(motor_info MotorInfo){
     
     int count = 0;
+    int total_time=0;
 
     while(count<99){
         if ( MotorInfo.state_record[count+1] == 0 ){
@@ -133,10 +134,11 @@ float ratio_count(motor_info MotorInfo){
         else{
             MotorInfo.inverse_count += MotorInfo.time_record[count];
         }
+        total_time+=MotorInfo.time_record[count];
         count++;
     }
 
-    float ratio = (float)(MotorInfo.high_count - MotorInfo.inverse_count) / MotorInfo.low_count;
+    float ratio = (float)(MotorInfo.high_count - MotorInfo.inverse_count) / total_time;
     printf("high : %d  low : %d   inverse : %d ", MotorInfo.high_count,MotorInfo.low_count,MotorInfo.inverse_count);
     printf("ratio : %f",ratio);
     printf("\n");
