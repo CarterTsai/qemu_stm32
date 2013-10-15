@@ -114,6 +114,10 @@ void show_pwm(motor_info MotorInfo){
             else{
                 printf("%c",ch3);
             }
+            if ( MotorInfo.time_record[count]>100 )
+            {
+                break;
+            }
         }
         count++;
     }
@@ -153,12 +157,14 @@ void renew_motor(){
     RightMotorInfo.high_count=0;
     RightMotorInfo.low_count=0;
     RightMotorInfo.inverse_count=0;
+    RightMotorInfo.time_last = 0;
     
     LeftMotorInfo.irq_count= 0;
     LeftMotorInfo.time_sum=0;
     LeftMotorInfo.high_count=0;
     LeftMotorInfo.low_count=0;
     LeftMotorInfo.inverse_count=0;
+    LeftMotorInfo.time_last = 0;
 }
 
 
@@ -169,6 +175,7 @@ int check_irq_count(){
         RightMotorInfo.ratio = ratio_count(RightMotorInfo);
         show_pwm(LeftMotorInfo);
         LeftMotorInfo.ratio = ratio_count(LeftMotorInfo);
+        printf("\n");
         renew_motor();
         return 1;
     }
@@ -336,6 +343,8 @@ static void stm32_p103_init(QEMUMachineInitArgs *args)
     LeftMotorInfo.time_sum = 0;    
     RightMotorInfo.irq_count = 0;
     LeftMotorInfo.irq_count = 0;
+    RightMotorInfo.time_last = 0;
+    LeftMotorInfo.time_last = 0;
 
     s = (Stm32P103 *)g_malloc0(sizeof(Stm32P103));
 
